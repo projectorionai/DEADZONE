@@ -1,0 +1,454 @@
+<!DOCTYPE html> 
+<html lang="en"> 
+<head>   
+  <meta charset="UTF-8" />   
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />   
+  <title>Dead Zone: Reclamation</title>   
+  <link rel="stylesheet" href="styles.css" /> 
+</head> 
+<body>   
+  <!-- ================= GAME CANVAS (WebGL 3D) + FX OVERLAY ================= -->   
+  <canvas id="game"></canvas>   
+  <canvas id="fx"></canvas>   
+  <div id="vignette"></div>   
+  <div id="injuryOverlay"></div>   
+
+  <!-- ================= HUD ================= -->   
+  <div id="hud">     
+    <div class="hud-left">       
+      <div class="hud-name" id="usernameHud">Survivor</div>       
+      <div class="bar-block">         
+        <div class="bar health"><div class="fill" id="healthFill"></div><span class="bar-label" id="healthText">100/100</span></div>         
+        <div class="bar stamina"><div class="fill" id="staminaFill"></div><span class="bar-label" id="staminaText">100/100</span></div>         
+        <div class="bar xp"><div class="fill" id="xpFill"></div><span class="bar-label" id="xpText">XP 0/100</span></div>         
+        <div id="statusRow"></div>       
+      </div>       
+      <div id="missionTracker" class="hidden"></div>     
+    </div>     
+    <div class="hud-right">       
+      <div class="chip" id="districtChip">D1</div>       
+      <div class="chip" id="levelText">LVL 1</div>       
+      <div class="chip gold" id="currencyText">  50</div>       
+      <div class="chip" id="killsText">Kills 0</div>       
+      <div class="chip" id="weightText">0.0/40 kg</div>       
+      <div class="chip admin-chip" id="adminBtn">  ADMIN</div>       
+      <div class="hud-menu">         
+        <button class="menu-btn" data-open="inventory" title="Inventory (I)">  I</button>         
+        <button class="menu-btn" data-open="talents" title="Talents (T)">  T</button>         
+        <button class="menu-btn" data-open="missions" title="Missions (M)">  M</button>         
+        <button class="menu-btn" data-open="market" title="Marketplace (P)">  P</button>         
+        <button class="menu-btn" data-open="armour" title="Armour (O)">  O</button>       
+      </div>     
+    </div>     
+    <div class="hud-weapon"><span id="weaponText">Baseball Bat</span></div>     
+    <div id="minimapWrap">       
+      <canvas id="minimap" width="190" height="190"></canvas>     
+    </div>   
+  </div>   
+
+  <!-- ================= CONTROLS HINT ================= -->   
+  <div id="controls">     
+    <b>WASD</b> Move   <b>Shift</b> Sprint   <b>Space</b> Ability   <b>Click</b> Attack      <b>1/2/3</b> Weapon   <b>R</b> Reload   <b>E</b> Search / Harvest   <b>F</b> Quick-heal      <b>I</b> Inventory   <b>T</b> Talents   <b>M</b> Missions   <b>P</b> Market   <b>O</b> Armour   <b>C</b> Character   <b>F9</b> Save   
+  </div>   
+
+  <!-- ================= TOAST ================= -->   
+  <div id="toast"></div>   
+
+  <!-- ================= LOOT CHANNEL BAR ================= -->   
+  <div id="lootBar" class="hidden">     
+    <div class="loot-label">SEARCHING </div>     
+    <div class="loot-track"><div class="loot-fill" id="lootFill"></div></div>   
+  </div>   
+
+  <!-- ================= MODAL WINDOWS ================= -->   
+  <div id="windows">     
+    <!-- Inventory -->     
+    <div id="inventoryWindow" class="window wide hidden">       
+      <div class="window-head"><h2>Your Inventory</h2><button class="x" data-close> </button></div>       
+      <div class="window-body">         
+        <div class="equip-layout">           
+          <div class="equip-side">             
+            <div class="eslot" data-armor="head"><span class="eslot-label">Helmet</span><div class="eslot-item" id="eqHead"></div><div class="dura" id="duraHead"></div></div>             
+            <div class="eslot" data-armor="chest"><span class="eslot-label">Armour</span><div class="eslot-item" id="eqChest"></div><div class="dura" id="duraChest"></div></div>             
+            <div class="eslot" data-armor="legs"><span class="eslot-label">Boots</span><div class="eslot-item" id="eqLegs"></div><div class="dura" id="duraLegs"></div></div>           
+          </div>           
+          <div class="equip-doll">             
+            <div class="doll-figure" id="dollFigure"> </div>             
+            <div class="doll-stats" id="dollStats"></div>           
+          </div>           
+          <div class="equip-side">             
+            <div class="eslot wslot" data-wslot="0"><span class="eslot-label">Weapon 1</span><div class="eslot-item" id="eqW0"></div></div>             
+            <div class="eslot wslot" data-wslot="1"><span class="eslot-label">Weapon 2</span><div class="eslot-item" id="eqW1"></div></div>             
+            <div class="eslot wslot" data-wslot="2"><span class="eslot-label">Weapon 3</span><div class="eslot-item" id="eqW2"></div></div>           
+          </div>         
+        </div>         
+        <div id="invGrid" class="grid"></div>         
+        <div class="inv-footer">           
+          <span id="invWeight">Weight: 0 / 40 kg</span>           
+          <div id="discardZone">  DISCARD</div>           
+          <span class="hint">Click: use / equip   Drag onto slots   Drag here to destroy</span>         
+        </div>       
+      </div>     
+    </div>     
+
+    <!-- Trader -->     
+    <div id="traderWindow" class="window wide hidden">       
+      <div class="window-head"><h2>Trader   Ravenside Outpost</h2>         
+        <span class="credits" id="traderCredits">  0</span>         
+        <button class="x" data-close> </button></div>       
+      <div class="window-body two-col">         
+        <div class="col">           
+          <h3>Buy</h3>           
+          <div id="traderBuyList" class="trade-list"></div>         
+        </div>         
+        <div class="col">           
+          <h3>Sell   click an item</h3>           
+          <div id="traderSellGrid" class="grid"></div>         
+        </div>       
+      </div>     
+    </div>     
+
+    <!-- Character -->     
+    <div id="characterWindow" class="window hidden">       
+      <div class="window-head"><h2>Character</h2><button class="x" data-close> </button></div>       
+      <div class="window-body">         
+        <div class="char-top">           
+          <div>Level <b id="charLevel">1</b></div>           
+          <div>XP <b id="charXP">0/100</b></div>           
+          <div>Unspent Points: <b id="charPoints" class="gold">0</b></div>         
+        </div>         
+        <div class="char-cols">           
+          <div class="char-stats">             
+            <h3>Attributes</h3>             
+            <div id="statList"></div>           
+          </div>           
+          <div class="char-derived">             
+            <h3>Derived</h3>             
+            <div id="charDerived"></div>             
+            <h3>Record</h3>             
+            <div class="record">               
+              <div>Kills: <b id="charKills">0</b></div>               
+              <div>Headshots: <b id="charHeadshots">0</b></div>               
+              <div>Containers looted: <b id="charLooted">0</b></div>               
+              <div>Survived: <b id="charTime">0m</b></div>             
+            </div>           
+          </div>         
+        </div>         
+        <div class="skills-head">           
+          <h3>Achievements</h3>           
+          <span class="hint">Talents moved to their own window   press <b>T</b></span>         
+        </div>         
+        <div id="achievementList" class="ach-list"></div>         
+        <h3>Lifetime Record</h3>         
+        <div id="lifetimeStats" class="record"></div>       
+      </div>     
+    </div>     
+
+    <!-- Talent Tree -->     
+    <div id="talentWindow" class="window wide hidden">       
+      <div class="window-head"><h2>  Talents</h2>         
+        <span class="credits">Points: <b id="talentPoints" class="gold">0</b></span>         
+        <button class="x" data-close> </button></div>       
+      <div class="window-body">         
+        <div id="talentGrid" class="talent-grid"></div>       
+      </div>     
+    </div>     
+
+    <!-- Marketplace -->     
+    <div id="marketWindow" class="window wide hidden">       
+      <div class="window-head"><h2>  Survivor Marketplace</h2>         
+        <span class="credits" id="marketCredits">  0</span>         
+        <button class="x" data-close> </button></div>       
+      <div class="market-tabs">         
+        <button data-mtab="buy" class="mtab active">Browse</button>         
+        <button data-mtab="sell" class="mtab">Sell &amp; My Listings</button>       
+      </div>       
+      <div class="window-body">         
+        <div id="marketBuyPane">           
+          <div class="market-controls">             
+            <input id="marketSearch" type="text" placeholder="Search items " autocomplete="off" />             
+            <select id="marketSort">               
+              <option value="price">Price  </option>               
+              <option value="priceDesc">Price  </option>               
+              <option value="rarity">Rarity</option>               
+              <option value="damage">Damage</option>               
+              <option value="newest">Newest</option>               
+              <option value="name">A Z</option>             
+            </select>           
+          </div>           
+          <div id="marketCats" class="market-cats"></div>           
+          <div id="marketList" class="market-list"></div>         
+        </div>         
+        <div id="marketSellPane" class="hidden">           
+          <div class="two-col">             
+            <div class="col"><h3>Your bag   click to list</h3><div id="marketSellGrid" class="grid"></div></div>             
+            <div class="col"><h3>My Listings (sell over time, 5% fee)</h3><div id="marketMyListings" class="market-list"></div></div>           
+          </div>         
+        </div>       
+      </div>     
+    </div>     
+
+    <!-- Armour -->     
+    <div id="armourWindow" class="window wide hidden">       
+      <div class="window-head"><h2>  Armour &amp; Equipment</h2><button class="x" data-close> </button></div>       
+      <div class="window-body">         
+        <div class="armour-layout">           
+          <div id="armourSlots" class="armour-slots"></div>           
+          <div class="armour-side">             
+            <h3>Protection</h3>             
+            <div id="armourStats" class="record"></div>             
+            <div id="armourSets"></div>           
+          </div>         
+        </div>         
+        <h3>Armour in your bag</h3>         
+        <div id="armourBag" class="market-list"></div>       
+      </div>     
+    </div>     
+
+    <!-- Storage -->     
+    <div id="storageWindow" class="window wide hidden">       
+      <div class="window-head"><h2>Storage   Safe Zone Stash</h2><button class="x" data-close> </button></div>       
+      <div class="window-body two-col">         
+        <div class="col"><h3>Backpack</h3><div id="storagePlayerGrid" class="grid"></div></div>         
+        <div class="col"><h3>Stash (no weight limit)</h3><div id="storageStashGrid" class="grid"></div></div>       
+      </div>       
+      <div class="inv-footer"><span id="storageHint"></span></div>     
+    </div>     
+
+    <!-- Missions -->     
+    <div id="missionWindow" class="window wide hidden">       
+      <div class="window-head"><h2>  Mission Board</h2>         
+        <span class="credits" id="missionCount">0/3 active</span>         
+        <button class="x" data-close> </button></div>       
+      <div class="window-body">         
+        <h3>  Active Contracts</h3>         
+        <div id="missionActive" class="mission-grid"></div>         
+        <h3>  Daily Contracts</h3>         
+        <div id="missionDailies" class="mission-grid"></div>         
+        <h3>Available Contracts</h3>         
+        <div id="missionBoard" class="mission-grid"></div>       
+      </div>     
+    </div>   
+  </div>   
+
+  <!-- ================= DISTRICT BANNER ================= -->   
+  <div id="districtBanner" class="hidden"></div>
+
+  <!-- ================= INTRO CUTSCENE ================= -->
+  <div id="introOverlay" class="overlay hidden">
+    <div class="intro-inner slide-in">
+      <div class="intro-title">DAY 0</div>
+      <div class="intro-text"></div>
+      <div class="intro-actions">
+        <button id="introNext" class="big-btn">Continue</button>
+        <button id="introSkip" class="text-btn">Skip intro</button>
+      </div>
+    </div>
+  </div>
+   
+
+  <!-- ================= TOOLTIP ================= -->   
+  <div id="tooltip"></div>   
+
+  <!-- ================= LOADING INSTANCE ================= -->   
+  <div id="loadingScreen" class="overlay hidden">     
+    <div class="overlay-inner loading-inner">       
+      <div class="loading-brand">DEADZONE</div>       
+      <div class="loading-spinner"></div>       
+      <h2 id="loadingAction" class="loading-action">ENTERING</h2>       
+      <p id="loadingName" class="loading-name"></p>       
+      <div class="loading-bar"><div id="loadingBarFill" class="loading-bar-fill"></div></div>       
+      <p id="loadingTip" class="loading-tip">Loading instance </p>     
+    </div>   
+  </div>   
+
+  <!-- ================= DEATH SCREEN ================= -->   
+  <div id="deathScreen" class="overlay hidden">     
+    <div class="overlay-inner">       
+      <h1 class="dead">YOU DIED</h1>       
+      <p id="deathStats"></p>       
+      <p class="sub">The horde overwhelmed you. The outpost medics recovered your body.</p>       
+      <button id="respawnBtn" class="big-btn">Return to Safe Zone</button>     
+    </div>   
+  </div>   
+
+  <!-- ================= START SCREEN ================= -->   
+  <div id="startScreen" class="overlay">     
+    <div class="overlay-inner">       
+      <h1 class="title">DEAD ZONE</h1>       
+      <h2 class="subtitle">R E C L A M A T I O N</h2>       
+      <p class="sub">Ravenside District   Isometric Survival v0.2</p>       
+      <div class="brief">         
+        Choose your class, then scour the ruined city. Enter buildings with <b>E</b>,         
+        fight the infected bestiary, loot containers, and haul supplies back to the         
+        outpost safe zone to trade and grow stronger.       
+      </div>       
+      <div class="username-field">         
+        <label for="usernameInput">Survivor Name</label>         
+        <input id="usernameInput" type="text" maxlength="16" placeholder="Enter your name" autocomplete="off" />       
+      </div>       
+      <div id="classPicker" class="class-picker">         
+        <div class="class-grid" id="classGrid"></div>         
+        <div id="classDetail" class="class-detail"></div>       
+      </div>       
+      <button id="startBtn" class="big-btn" disabled>Enter Ravenside</button>       
+      <button id="wipeBtn" class="text-btn">Wipe save &amp; restart</button>     
+    </div>   
+  </div>   
+
+  <!-- ================= TACTICAL PAUSE ================= -->   
+  <div id="pauseCountdown" class="hidden">     
+    <div class="pc-num" id="pcNum">5</div>     
+    <div class="pc-label">Pausing  move to cancel</div>   
+  </div>   
+  <div id="pauseMenu" class="overlay hidden">     
+    <div class="pause-panel">       
+      <h1 class="pause-title">PAUSED</h1>       
+      <div class="pause-actions">         
+        <button id="pauseResume" class="pause-btn primary">Resume</button>         
+        <button id="pauseInv" class="pause-btn">Inventory</button>         
+        <button id="pauseMap" class="pause-btn">World Map</button>         
+        <button id="pauseSettings" class="pause-btn">Settings</button>       
+      </div>       
+      <div id="settingsPanel" class="settings-panel hidden">         
+        <h3>Graphics</h3>         
+        <div class="set-row"><label>Render Distance</label><input type="range" id="setRenderDist" min="2000" max="9000" step="200" /><span class="set-val" id="setRenderDistVal"></span></div>         
+        <div class="set-row"><label>Shadow Quality</label>           
+          <select id="setShadow"><option value="off">Off</option><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option></select></div>         
+        <div class="set-row"><label>Anti-Aliasing</label><input type="checkbox" id="setAA" /></div>         
+        <div class="set-row"><label>Resolution Scale</label><input type="range" id="setResScale" min="0.5" max="2" step="0.1" /><span class="set-val" id="setResScaleVal"></span></div>         
+        <div class="set-row"><label>FPS Limit</label>           
+          <select id="setFps"><option value="0">Unlimited</option><option value="30">30</option><option value="60">60</option><option value="120">120</option></select></div>       
+      </div>     
+    </div>     
+    <div id="worldMap" class="worldmap hidden">       
+      <canvas id="worldMapCanvas" width="760" height="540"></canvas>       
+      <button id="worldMapClose" class="pause-btn">Close Map</button>     
+    </div>   
+  </div>   
+
+  <!-- ================= ADMIN / CREATIVE MODE ================= -->   
+  <div id="adminPanel" class="hidden">     
+    <div class="admin-head">CREATIVE MODE <span class="admin-hint">( ` or button toggles )</span>       
+      <button id="adminClose" class="admin-x"> </button></div>     
+    <div class="admin-toggles">       
+      <label><input type="checkbox" id="adminGod" /> God Mode</label>       
+      <label><input type="checkbox" id="adminNoclip" /> Noclip</label>       
+      <label><input type="checkbox" id="adminAmmo" /> Infinite Ammo</label>     
+    </div>     
+    <div class="admin-section">  Dashboard</div>     
+    <div id="adminDash" class="admin-dash"></div>     
+    <div class="admin-section">Player</div>     
+    <div class="admin-actions">       
+      <button data-admin="heal">Full Heal</button>       
+      <button data-admin="revive">Revive</button>       
+      <button data-admin="feed">Restore Stamina</button>       
+      <button data-admin="credits">+1000 cr</button>       
+      <button data-admin="levelup">Level +1</button>       
+      <button data-admin="statpts">+10 Stat Pts</button>       
+      <button data-admin="resetTalents">Reset Talents</button>     
+    </div>     
+    <div class="admin-section">Teleport</div>     
+    <div class="admin-actions">       
+      <button data-admin="tpRavenside">Ravenside</button>       
+      <button data-admin="tpBastion">Fort Bastion</button>       
+      <button data-admin="tpUnion">Union Market</button>       
+      <button data-admin="tpMercy">St. Mercy</button>       
+      <button data-admin="tpDeep">Deep City</button>     
+    </div>     
+    <div class="admin-section">World</div>     
+    <div class="admin-actions">       
+      <button data-admin="spawnWalker">Spawn Walker</button>       
+      <button data-admin="horde">Spawn Horde</button>       
+      <button data-admin="siege">Trigger Siege</button>       
+      <button data-admin="worldboss">World Boss</button>       
+      <button data-admin="clear">Clear Zombies</button>       
+      <button data-admin="day">Set Day</button>       
+      <button data-admin="night">Set Night</button>       
+      <button data-admin="wClear">  Clear</button>       
+      <button data-admin="wRain">  Rain</button>       
+      <button data-admin="wStorm">  Storm</button>
+      <button data-admin="restart" style="border-color:#c0392b;color:#ff8a7a">FULL RESTART</button>     
+    </div>     
+    <div class="admin-section">Spawn Boss</div>     
+    <div class="admin-actions" id="adminBosses"></div>     
+    <div class="admin-section">Weapons   click to equip</div>     
+    <div class="admin-weapons" id="adminWeapons"></div>     
+    <div class="admin-section">Give any item   <input type="text" id="adminSearch" placeholder="search " /></div>     
+    <div class="admin-give" id="adminGive"></div>   
+  </div>   
+
+  <!-- ================= SCRIPTS (ordered, no build step) ================= -->   
+  <!-- 3D engine (vendored   exposes global THREE) -->   
+  <script src="js/vendor/three.min.js"></script>   
+  <!-- post-processing (vendored r128 examples   attach to global THREE) -->   
+  <script src="js/vendor/EffectComposer.js"></script>   
+  <script src="js/vendor/RenderPass.js"></script>   
+  <script src="js/vendor/ShaderPass.js"></script>   
+  <script src="js/vendor/MaskPass.js"></script>   
+  <script src="js/vendor/CopyShader.js"></script>   
+  <script src="js/vendor/LuminosityHighPassShader.js"></script>   
+  <script src="js/vendor/UnrealBloomPass.js"></script>   
+  
+  <!-- core utilities MUST load before data to fix the loading error -->
+  <script src="js/core/Utils.js?v=8"></script>
+
+  <!-- data -->   
+  <script src="js/data/config.js?v=8"></script>   
+  <script src="js/data/items.js?v=8"></script>   
+  <script src="js/data/weapons.js?v=8"></script>   
+  <script src="js/data/armor.js?v=8"></script>   
+  <script src="js/data/encumbrance.js?v=8"></script>   
+  <script src="js/data/loot-tables.js?v=8"></script>   
+  <script src="js/data/prices.js?v=8"></script>   
+  <script src="js/data/classes.js?v=8"></script>    
+  <script src="js/data/enemies.js?v=8"></script>    
+  <script src="js/data/abilities.js?v=8"></script>    
+  <script src="js/data/upgrades.js?v=8"></script>    
+  <script src="js/data/skills.js?v=8"></script>
+  <script src="js/data/missions.js?v=8"></script>
+  <script src="js/data/marketplace.js?v=8"></script>
+  <script src="js/data/AdminMode.js?v=8"></script>
+
+  <!-- core (remaining) -->   
+  <script src="js/core/Iso.js?v=8"></script>   
+  <script src="js/core/Input.js?v=8"></script>   
+  <script src="js/core/Camera.js?v=8"></script>   
+  <script src="js/core/Collision.js?v=8"></script>   
+  <script src="js/core/ObjectManager.js?v=8"></script>   
+  <script src="js/core/EntityManager.js?v=8"></script>   
+  <script src="js/core/SaveSystem.js?v=8"></script>   
+  <script src="js/core/Settings.js?v=8"></script>   
+  <script src="js/core/Audio.js?v=8"></script>   
+
+  <!-- 3D rendering -->   
+  <script src="js/render/Models.js?v=8"></script>   
+  <script src="js/core/Renderer3D.js?v=8"></script>   
+
+  <!-- world -->   
+  <script src="js/world/World.js?v=8"></script>   
+  <script src="js/world/interior.js?v=8"></script>    
+
+  <!-- entities -->    
+  <script src="js/entities/Entity.js?v=8"></script>    
+  <script src="js/entities/Bullet.js?v=8"></script>    
+  <script src="js/entities/Zombie.js?v=8"></script>    
+  <script src="js/entities/Companion.js?v=8"></script>    
+  <script src="js/entities/Guard.js?v=8"></script>    
+  <script src="js/entities/Player.js?v=8"></script>    
+
+  <!-- systems -->   
+  <script src="js/systems/Inventory.js?v=8"></script>   
+  <script src="js/systems/LootSystem.js?v=8"></script>   
+  <script src="js/systems/Trader.js?v=8"></script>   
+  <script src="js/systems/Progression.js?v=8"></script>   
+  <script src="js/systems/Missions.js?v=8"></script>   
+  <script src="js/systems/Meta.js?v=8"></script>   
+
+  <!-- ui + game -->   
+  <script src="js/ui/Minimap.js?v=8"></script>   
+  <script src="js/ui/UI.js?v=8"></script>   
+  <script src="js/Game.js?v=8"></script>   
+  <script src="js/main.js?v=8"></script> 
+</body> 
+</html>

@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir /s /b *.js *.json 2>nul | findstr /E \"\\.(js|json)$\" | powershell -Command \"$input | Select-Object -First 30\")"
+    ]
+  }
+}

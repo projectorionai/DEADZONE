@@ -1,0 +1,73 @@
+/* Player classes/roles — Dead Frontier-inspired archetypes with real pros/cons.
+ * Modifiers are multipliers/additives applied on top of stats in Player.
+ */
+const CLASSES = {
+  soldier: {
+    id: 'soldier', name: 'Soldier', color: '#4a7ba6',
+    blurb: 'Frontline shooter. Hits hard with guns and shrugs off punishment, but no support tricks.',
+    pros: ['+30% ranged damage', 'Tighter weapon spread', '+15% max health'],
+    cons: ['Poor loot fortune', 'No self-heal bonus'],
+    stats: { strength: 3, endurance: 4, accuracy: 5, survival: 1, dexterity: 3, agility: 2, reloading: 3 },
+    mods: { rangedMult: 1.30, meleeMult: 1.05, maxHpMult: 1.15, spreadMult: 0.6,
+            healMult: 1.0, lootMult: 0.85, speedMult: 1.0, carryMult: 1.0, critChance: 0.05 },
+    kit: [{ id: 'pistol_9mm', qty: 1 }, { id: 'combatknife', qty: 1 }, { id: 'ammo_9mm', qty: 48 }, { id: 'bandage', qty: 3 }],
+    startWeapon: 'pistol',
+  },
+  medic: {
+    id: 'medic', name: 'Medic', color: '#4fae5a',
+    blurb: 'Field surgeon. Healing items go much further and you regenerate, but your damage is low.',
+    pros: ['+80% healing from items', 'Slow passive health regen', 'Extra starting meds'],
+    cons: ['-20% weapon damage', 'Low strength'],
+    stats: { strength: 2, endurance: 4, accuracy: 3, survival: 4, dexterity: 2, agility: 2, reloading: 2 },
+    mods: { rangedMult: 0.8, meleeMult: 0.85, maxHpMult: 1.0, spreadMult: 1.0,
+            healMult: 1.8, lootMult: 1.0, speedMult: 1.0, carryMult: 1.0, regen: 1.5, critChance: 0.02 },
+    kit: [{ id: 'machete_i', qty: 1 }, { id: 'medkit', qty: 3 }, { id: 'bandage', qty: 5 }, { id: 'food_can', qty: 2 }],
+    startWeapon: 'machete',
+  },
+  engineer: {
+    id: 'engineer', name: 'Engineer', color: '#c9a13a',
+    blurb: 'Tinkerer. Salvages more materials and crafts at the workbench; steady but unspectacular in a fight.',
+    pros: ['+40% materials from loot', 'Unlocks crafting recipes', '+25% carry weight'],
+    cons: ['Average combat', 'Slower move speed'],
+    stats: { strength: 4, endurance: 3, accuracy: 3, survival: 3, dexterity: 3, agility: 1, reloading: 3 },
+    mods: { rangedMult: 1.0, meleeMult: 1.1, maxHpMult: 1.05, spreadMult: 0.9,
+            healMult: 1.0, lootMult: 1.15, materialMult: 1.4, carryMult: 1.25, speedMult: 0.94, craft: true, critChance: 0.04 },
+    kit: [{ id: 'pistol_9mm', qty: 1 }, { id: 'wrench_i', qty: 1 }, { id: 'ammo_9mm', qty: 24 }, { id: 'scrap', qty: 10 }, { id: 'bandage', qty: 2 }],
+    startWeapon: 'pistol',
+  },
+  scout: {
+    id: 'scout', name: 'Scout', color: '#8a6fd0',
+    blurb: 'Fast and lethal, striking from the shadows. Glass cannon — low health and light on carry.',
+    pros: ['+18% move speed', '+20% crit chance', 'Zombies notice you later (stealth)'],
+    cons: ['-25% max health', 'Low carry weight'],
+    stats: { strength: 2, endurance: 2, accuracy: 4, survival: 5, dexterity: 4, agility: 5, reloading: 2 },
+    mods: { rangedMult: 1.1, meleeMult: 1.2, maxHpMult: 0.75, spreadMult: 0.8,
+            healMult: 1.0, lootMult: 1.05, speedMult: 1.18, carryMult: 0.8, stealth: 0.6, critChance: 0.25 },
+    kit: [{ id: 'combatknife', qty: 1 }, { id: 'revolver_45', qty: 1 }, { id: 'ammo_45', qty: 18 }, { id: 'bandage', qty: 3 }],
+    startWeapon: 'revolver',
+  },
+  scavenger: {
+    id: 'scavenger', name: 'Scavenger', color: '#c96a3a',
+    blurb: 'Born survivor. Finds far more loot and hauls a huge pack, but is no warrior.',
+    pros: ['+50% loot quantity', '+40% carry weight', 'Cheaper trader prices'],
+    cons: ['-15% weapon damage', 'Weak stats spread thin'],
+    stats: { strength: 3, endurance: 3, accuracy: 2, survival: 5, dexterity: 2, agility: 3, reloading: 2 },
+    mods: { rangedMult: 0.85, meleeMult: 0.95, maxHpMult: 1.0, spreadMult: 1.1,
+            healMult: 1.1, lootMult: 1.5, carryMult: 1.4, speedMult: 1.0, haggle: 0.85, critChance: 0.03 },
+    kit: [{ id: 'crowbar_i', qty: 1 }, { id: 'sawnoff_12g', qty: 1 }, { id: 'ammo_shells', qty: 12 }, { id: 'food_can', qty: 3 }, { id: 'water_bottle', qty: 3 }, { id: 'bandage', qty: 3 }],
+    startWeapon: 'crowbar',
+  },
+  hunter: {
+    id: 'hunter', name: 'Hunter', color: '#6a8a4a',
+    blurb: 'Tracker and survival expert. Enhanced perception finds more loot and detects threats earlier. Starts with Lucy companion.',
+    pros: ['+30% detect radius', '+25% loot discovery', 'Companion: Lucy the Husky'],
+    cons: ['Medium carry weight', 'Balanced stats'],
+    stats: { strength: 4, endurance: 3, accuracy: 4, survival: 4, dexterity: 3, agility: 3, reloading: 3 },
+    mods: { rangedMult: 1.15, meleeMult: 1.1, maxHpMult: 1.05, spreadMult: 0.85,
+            healMult: 1.0, lootMult: 1.25, carryMult: 1.0, speedMult: 1.05, detectMult: 1.3, lootDiscovery: 0.25, critChance: 0.06, companion: true },
+    kit: [{ id: 'huntingrifle_308', qty: 1 }, { id: 'ammo_308', qty: 30 }, { id: 'combatknife', qty: 1 }, { id: 'bandage', qty: 4 }, { id: 'food_can', qty: 2 }],
+    startWeapon: 'huntingrifle',
+  },
+};
+
+function getClass(id) { return CLASSES[id] || CLASSES.soldier; }
